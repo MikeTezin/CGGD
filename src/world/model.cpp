@@ -104,9 +104,9 @@ void model::fill_vertex_data(cg::vertex& vertex, const tinyobj::attrib_t& attrib
 	}
 	else
 	{
-		vertex.x = attrib.normals[3 * idx.normal_index];
-		vertex.y = attrib.normals[3 * idx.normal_index + 1];
-		vertex.z = attrib.normals[3 * idx.normal_index + 2];
+		vertex.nx = attrib.normals[3 * idx.normal_index];
+		vertex.ny = attrib.normals[3 * idx.normal_index + 1];
+		vertex.nz = attrib.normals[3 * idx.normal_index + 2];
 	}
 	if (idx.texcoord_index < 0)
 	{
@@ -116,7 +116,7 @@ void model::fill_vertex_data(cg::vertex& vertex, const tinyobj::attrib_t& attrib
 	else
 	{
 		vertex.u = attrib.texcoords[2 * idx.texcoord_index];
-		vertex.y = attrib.texcoords[2 * idx.texcoord_index + 1];
+		vertex.v = attrib.texcoords[2 * idx.texcoord_index + 1];
 	}
 	vertex.ambient_r = material.ambient[0];
 	vertex.ambient_g = material.ambient[1];
@@ -169,6 +169,7 @@ void model::fill_buffers(const std::vector<tinyobj::shape_t>& shapes, const tiny
 				index_buffer->item(index_buffer_id) = index_map[idx_tuple];
 				index_buffer_id++;
 			}
+			index_offset += fv;
 			if (!materials[mesh.material_ids[0]].diffuse_texname.empty())
 			{
 				textures[s] = base_folder / materials[mesh.material_ids[0]].diffuse_texname;

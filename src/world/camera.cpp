@@ -42,7 +42,7 @@ void cg::world::camera::set_angle_of_view(float in_aov)
 
 void cg::world::camera::set_height(float in_height)
 {
-	height - in_height;
+	height = in_height;
 	aspect_ratio = width / height;
 }
 
