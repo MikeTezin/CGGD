@@ -13,7 +13,7 @@ void cg::renderer::rasterization_renderer::init()
 			settings->width, settings->height);
 	depth_buffer = std::make_shared<cg::resource<float>>(
 			settings->width, settings->height);
-	rasterizer->set_render_target(render_target);
+	rasterizer->set_render_target(render_target, depth_buffer);
 
 	model = std::make_shared<cg::world::model>();
 	model->load_obj(settings->model_path);
