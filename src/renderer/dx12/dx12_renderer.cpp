@@ -352,7 +352,12 @@ void cg::renderer::dx12_renderer::create_resource_on_default_heap(ComPtr<ID3D12R
 
 void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, UINT buffer_size, ComPtr<ID3D12Resource>& destination_resource)
 {
-	// TODO Lab: 3.03 Implement map, unmap, and copying data to the resource
+	UINT8* buffer_data_begin;
+	CD3DX12_RANGE read_range(0, 0);
+	THROW_IF_FAILED(destination_resource->Map(0, &read_range,
+											  reinterpret_cast<void**>(&buffer_data_begin)));
+	memcpy(buffer_data_begin, buffer_data, buffer_size);
+	destination_resource->Unmap(0, 0);
 }
 
 void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, const UINT buffer_size, ComPtr<ID3D12Resource>& destination_resource, ComPtr<ID3D12Resource>& intermediate_resource, D3D12_RESOURCE_STATES state_after, int row_pitch, int slice_pitch)
@@ -379,7 +384,7 @@ D3D12_INDEX_BUFFER_VIEW cg::renderer::dx12_renderer::create_index_buffer_view(co
 	view.BufferLocation = index_buffer->GetGPUVirtualAddress();
 	view.SizeInBytes = index_buffer_size;
 	view.Format = DXGI_FORMAT_R32_UINT;
-	return D3D12_INDEX_BUFFER_VIEW{};
+	return view;
 }
 
 void cg::renderer::dx12_renderer::create_shader_resource_view(const ComPtr<ID3D12Resource>& texture, D3D12_CPU_DESCRIPTOR_HANDLE cpu_handler)
@@ -482,7 +487,7 @@ void cg::renderer::dx12_renderer::load_assets()
 void cg::renderer::dx12_renderer::populate_command_list()
 {
 	//RESET
-	THROW_IF_FAILED(command_allocators[frame_index]->Reset());
+	reinterpret_cast<void**>(&constant_buffer_data_begin);
 	THROW_IF_FAILED(command_list->Reset(
 			command_allocators[frame_index].Get(),
 			pipeline_state.Get()));
@@ -501,7 +506,7 @@ void cg::renderer::dx12_renderer::populate_command_list()
 			CD3DX12_RESOURCE_BARRIER::Transition(
 					render_targets[frame_index].Get(),
 					D3D12_RESOURCE_STATE_PRESENT,
-					D3D12_RESOURCE_STATE_PRESENT )};
+					D3D12_RESOURCE_STATE_RENDER_TARGET)};
 	command_list->ResourceBarrier(_countof(begin_barriers), begin_barriers);
 
 	//Drawing
