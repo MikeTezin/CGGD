@@ -13,32 +13,21 @@ void cg::renderer::dx12_renderer::init()
 {
 	model = std::make_shared<cg::world::model>();
 	model->load_obj(settings->model_path);
-
 	camera = std::make_shared<cg::world::camera>();
 	camera->set_height(static_cast<float>(settings->height));
 	camera->set_width(static_cast<float>(settings->width));
-	camera->set_position(
-			float3{
-					settings->camera_position[0],
-					settings->camera_position[1],
-					settings->camera_position[2],
-			});
+	camera->set_position(float3{settings->camera_position[0], settings->camera_position[1], settings->camera_position[2]});
 	camera->set_phi(settings->camera_phi);
 	camera->set_theta(settings->camera_theta);
 	camera->set_angle_of_view(settings->camera_angle_of_view);
 	camera->set_z_near(settings->camera_z_near);
 	camera->set_z_far(settings->camera_z_far);
 
-	view_port = CD3DX12_VIEWPORT(0.f, 0.f,
-								 static_cast<float>(settings->width),
-								 static_cast<float>(settings->height));
-	scissor_rect = CD3DX12_RECT(0, 0,
-								 static_cast<long>(settings->width),
-								 static_cast<long>(settings->height));
+	view_port = CD3DX12_VIEWPORT(0.f, 0.f, static_cast<float>(settings->width),  static_cast<float>(settings->height));
+	scissor_rect = CD3DX12_RECT(0., 0, static_cast<LONG>(settings->width),  static_cast<LONG>(settings->height));
 
 	load_pipeline();
 	load_assets();
-
 }
 
 void cg::renderer::dx12_renderer::destroy()
@@ -56,7 +45,6 @@ void cg::renderer::dx12_renderer::update()
 
 	cb.mwpMatrix = camera->get_dxm_mvp_matrix();
 	memcpy(constant_buffer_data_begin, &cb, sizeof(cb));
-
 }
 
 void cg::renderer::dx12_renderer::render()
@@ -64,8 +52,9 @@ void cg::renderer::dx12_renderer::render()
 	populate_command_list();
 
 	ID3D12CommandList* command_lists[] = {command_list.Get()};
-	command_queue->ExecuteCommandLists(
-			_countof(command_lists), command_lists);
+
+	command_queue->ExecuteCommandLists(_countof(command_lists), command_lists);
+
 	THROW_IF_FAILED(swap_chain->Present(0, 0));
 
 	move_to_next_frame();
@@ -73,17 +62,16 @@ void cg::renderer::dx12_renderer::render()
 
 ComPtr<IDXGIFactory4> cg::renderer::dx12_renderer::get_dxgi_factory()
 {
-	UINT dxgi_factory_flag = 0;
+		UINT dxgi_factory_flag = 0;
 #ifdef _DEBUG
 	ComPtr<ID3D12Debug> debug_controller;
-	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug_controller)))) {
+	if SUCCEEDED (D3D12GetDebugInterface(IID_PPV_ARGS(&debug_controller))) {
 		debug_controller->EnableDebugLayer();
-		dxgi_factory_flag |= DXGI_CREATE_FACTORY_DEBUG; 
+		dxgi_factory_flag |= DXGI_CREATE_FACTORY_DEBUG;
 	}
 #endif
 	ComPtr<IDXGIFactory4> dxgi_factory;
-	THROW_IF_FAILED(CreateDXGIFactory2(dxgi_factory_flag, 
-										IID_PPV_ARGS(&dxgi_factory)));
+	THROW_IF_FAILED(CreateDXGIFactory2(dxgi_factory_flag, IID_PPV_ARGS(&dxgi_factory)));
 	return dxgi_factory;
 }
 
@@ -97,9 +85,7 @@ void cg::renderer::dx12_renderer::initialize_device(ComPtr<IDXGIFactory4>& dxgi_
 	OutputDebugString(adapter_desc.Description);
 	OutputDebugString(L"\n");
 #endif
-	THROW_IF_FAILED(D3D12CreateDevice(hardware_adapter.Get(),
-					  D3D_FEATURE_LEVEL_11_0,
-					  IID_PPV_ARGS(&device)));
+	THROW_IF_FAILED(D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
 }
 
 void cg::renderer::dx12_renderer::create_direct_command_queue()
@@ -107,8 +93,7 @@ void cg::renderer::dx12_renderer::create_direct_command_queue()
 	D3D12_COMMAND_QUEUE_DESC queue_desc{};
 	queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	device->CreateCommandQueue(&queue_desc,
-							   IID_PPV_ARGS(&command_queue));
+	device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&command_queue));
 }
 
 void cg::renderer::dx12_renderer::create_swap_chain(ComPtr<IDXGIFactory4>& dxgi_factory)
@@ -123,16 +108,17 @@ void cg::renderer::dx12_renderer::create_swap_chain(ComPtr<IDXGIFactory4>& dxgi_
 	swap_chain_desc.SampleDesc.Count = 1;
 
 	ComPtr<IDXGISwapChain1> temp_swap_chain;
-	dxgi_factory->CreateSwapChainForHwnd(
-			command_queue.Get(),
-			cg::utils::window::get_hwnd(),
-			&swap_chain_desc,
-			nullptr,
-			nullptr,
-			&temp_swap_chain);
-	dxgi_factory->MakeWindowAssociation(
-			cg::utils::window::get_hwnd(),
-			DXGI_MWA_NO_ALT_ENTER);
+	THROW_IF_FAILED(dxgi_factory->CreateSwapChainForHwnd(
+					command_queue.Get(),
+					cg::utils::window::get_hwnd(),
+					&swap_chain_desc,
+					nullptr,
+					nullptr,
+					&temp_swap_chain
+				)
+	);
+
+	dxgi_factory->MakeWindowAssociation(cg::utils::window::get_hwnd(), DXGI_MWA_NO_ALT_ENTER);
 
 	temp_swap_chain.As(&swap_chain);
 	frame_index = swap_chain->GetCurrentBackBufferIndex();
@@ -141,14 +127,11 @@ void cg::renderer::dx12_renderer::create_swap_chain(ComPtr<IDXGIFactory4>& dxgi_
 void cg::renderer::dx12_renderer::create_render_target_views()
 {
 	rtv_heap.create_heap(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, frame_number);
-	for (UINT i = 0; i < frame_number; i++)
-	{
-		THROW_IF_FAILED(swap_chain->GetBuffer(
-			i, IID_PPV_ARGS(&render_targets[i])));
-		device->CreateRenderTargetView(
-				render_targets[i].Get(),
-				nullptr,
-				rtv_heap.get_cpu_descriptor_handle(i));
+	for (UINT i = 0; i < frame_number; i++) {
+		THROW_IF_FAILED(swap_chain->GetBuffer(i, IID_PPV_ARGS(&render_targets[i])));
+		device->CreateRenderTargetView(render_targets[i].Get(),
+									   nullptr,
+									   rtv_heap.get_cpu_descriptor_handle(i));
 		std::wstring name(L"Render target ");
 		name += std::to_wstring(i);
 		render_targets[i]->SetName(name.c_str());
@@ -161,21 +144,22 @@ void cg::renderer::dx12_renderer::create_depth_buffer()
 
 void cg::renderer::dx12_renderer::create_command_allocators()
 {
-	for (auto& command_allocator : command_allocators) {
-		THROW_IF_FAILED(device->CreateCommandAllocator(
-				D3D12_COMMAND_LIST_TYPE_DIRECT,
-				IID_PPV_ARGS(&command_allocator)));
+	for (auto& command_allocator:command_allocators) {
+		THROW_IF_FAILED(
+			device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&command_allocator))
+		);
 	}
 }
 
 void cg::renderer::dx12_renderer::create_command_list()
 {
 	THROW_IF_FAILED(device->CreateCommandList(
-			0,
-			D3D12_COMMAND_LIST_TYPE_DIRECT,
-			command_allocators[0].Get(),
-			pipeline_state.Get(),
-			IID_PPV_ARGS(&command_list)));
+					0,
+					D3D12_COMMAND_LIST_TYPE_DIRECT,
+					command_allocators[frame_index].Get(),
+					pipeline_state.Get(),
+					IID_PPV_ARGS(&command_list))
+					);
 }
 
 
@@ -199,26 +183,24 @@ void cg::renderer::dx12_renderer::create_root_signature(const D3D12_STATIC_SAMPL
 	CD3DX12_ROOT_PARAMETER1 root_parameters[1];
 	CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 
-	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, 
-		D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-	root_parameters[0].InitAsDescriptorTable(
-			1,
-			&ranges[0],
-			D3D12_SHADER_VISIBILITY_ALL);
+	ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+				   1,
+				   0,
+				   0,
+				   D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC
+				   );
+	root_parameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_ALL);
 
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE rs_feature_data{};
 	rs_feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-	if (FAILED(device->CheckFeatureSupport(
-		D3D12_FEATURE_ROOT_SIGNATURE,
-		&rs_feature_data,
-		sizeof(rs_feature_data))))
-	{
+	if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE,
+										   &rs_feature_data,
+										   sizeof(rs_feature_data)))) {
 		rs_feature_data.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
 
 	D3D12_ROOT_SIGNATURE_FLAGS rs_flags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rs_desc;
 	rs_desc.Init_1_1(
 			_countof(root_parameters),
@@ -226,25 +208,20 @@ void cg::renderer::dx12_renderer::create_root_signature(const D3D12_STATIC_SAMPL
 			num_sampler_descriptors,
 			sampler_descriptors,
 			rs_flags);
-	ComPtr<ID3DBlob> signature;
-	ComPtr<ID3DBlob> error;
 
-	HRESULT res = D3DX12SerializeVersionedRootSignature(
-			&rs_desc,
-			rs_feature_data.HighestVersion,
-			&signature,
-			&error);
-	if (FAILED(res))
-	{
-		OutputDebugStringA((char*) error->GetBufferPointer());
+	ComPtr<ID3DBlob> signature, error;
+	HRESULT res = D3DX12SerializeVersionedRootSignature(&rs_desc,
+														rs_feature_data.HighestVersion,
+														&signature,
+														&error);
+	if (FAILED(res)){
+		OutputDebugStringA((char*)error->GetBufferPointer());
 		THROW_IF_FAILED(res);
 	}
-	THROW_IF_FAILED(device->CreateRootSignature(
-			0,
-			signature->GetBufferPointer(),
-			signature->GetBufferSize(),
-			IID_PPV_ARGS(&root_signature)));
-
+	THROW_IF_FAILED(device->CreateRootSignature(0,
+												signature->GetBufferPointer(),
+												signature->GetBufferSize(),
+												IID_PPV_ARGS(&root_signature)));
 }
 
 std::filesystem::path cg::renderer::dx12_renderer::get_shader_path(const std::string& shader_name)
@@ -254,17 +231,14 @@ std::filesystem::path cg::renderer::dx12_renderer::get_shader_path(const std::st
 	return std::filesystem::path(buffer).parent_path() / shader_name;
 }
 
-ComPtr<ID3DBlob> cg::renderer::dx12_renderer::compile_shader(const std::filesystem::path& shader_path, 
-	const std::string& entrypoint, 
-	const std::string& target)
+ComPtr<ID3DBlob> cg::renderer::dx12_renderer::compile_shader(const std::filesystem::path& shader_path, const std::string& entrypoint, const std::string& target)
 {
-	ComPtr<ID3DBlob> shader;
-	ComPtr<ID3DBlob> error;
+	ComPtr<ID3DBlob> shader, error;
 	UINT compile_flags = 0;
-#ifdef DEBUG
+#ifdef _DEBUG
 	compile_flags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif// DEBUG
-	HRESULT res = D3DCompileFromFile(
+#endif
+	HRESULT res = D3DCompileFromFile (
 			shader_path.wstring().c_str(),
 			nullptr,
 			nullptr,
@@ -274,9 +248,9 @@ ComPtr<ID3DBlob> cg::renderer::dx12_renderer::compile_shader(const std::filesyst
 			0,
 			&shader,
 			&error);
-	if (FAILED(res))
-	{
-		OutputDebugStringA((char*) error->GetBufferPointer());
+
+	if (FAILED(res)) {
+		OutputDebugStringA((char*)error->GetBufferPointer());
 		THROW_IF_FAILED(res);
 	}
 	return shader;
@@ -288,29 +262,59 @@ void cg::renderer::dx12_renderer::create_pso(const std::string& shader_name)
 			get_shader_path(shader_name),
 			"VSMain",
 			"vs_5_0");
+
 	ComPtr<ID3DBlob> pixel_shader = compile_shader(
 			get_shader_path(shader_name),
 			"PSMain",
 			"ps_5_0");
 
 	D3D12_INPUT_ELEMENT_DESC input_descs[] = {
-			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
-			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12,
-			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24,
-			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32,
-			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44,
-			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 2, DXGI_FORMAT_R32G32B32_FLOAT, 0, 56,
-			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"POSITION",
+			 0,
+			 DXGI_FORMAT_R32G32B32_FLOAT,
+			 0,
+			 0,
+			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			 0},
+			{"NORMAL",
+			 0,
+			 DXGI_FORMAT_R32G32B32_FLOAT,
+			 0,
+			 12,
+			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			 0},
+			{"TEXCOORD",
+			 0,
+			 DXGI_FORMAT_R32G32_FLOAT,
+			 0,
+			 24,
+			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			 0},
+			{"COLOR",
+			 0,
+			 DXGI_FORMAT_R32G32B32_FLOAT,
+			 0,
+			 32,
+			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			 0},
+			{"COLOR",
+			 1,
+			 DXGI_FORMAT_R32G32B32_FLOAT,
+			 0,
+			 44,
+			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			 0},
+			{"COLOR",
+			 2,
+			 DXGI_FORMAT_R32G32B32_FLOAT,
+			 0,
+			 56,
+			 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			 0}
 	};
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
-	pso_desc.InputLayout = {input_descs,
-							_countof(input_descs)};
+	pso_desc.InputLayout = {input_descs, _countof(input_descs)};
 	pso_desc.pRootSignature = root_signature.Get();
 	pso_desc.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
 	pso_desc.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
@@ -327,21 +331,21 @@ void cg::renderer::dx12_renderer::create_pso(const std::string& shader_name)
 	pso_desc.SampleDesc.Count = 1;
 
 	THROW_IF_FAILED(device->CreateGraphicsPipelineState(
-			&pso_desc,
-			IID_PPV_ARGS(&pipeline_state)));
+					&pso_desc,
+					IID_PPV_ARGS(&pipeline_state)
+	));
 }
 
 void cg::renderer::dx12_renderer::create_resource_on_upload_heap(ComPtr<ID3D12Resource>& resource, UINT size, const std::wstring& name)
 {
 	THROW_IF_FAILED(device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(size),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&resource)));
-	if (!name.empty())
-	{
+					&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+					D3D12_HEAP_FLAG_NONE,
+					&CD3DX12_RESOURCE_DESC::Buffer(size),
+					D3D12_RESOURCE_STATE_GENERIC_READ,
+					nullptr,
+					IID_PPV_ARGS(&resource)));
+	if (!name.empty()) {
 		resource->SetName(name.c_str());
 	}
 }
@@ -362,11 +366,6 @@ void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, UINT buffer
 
 void cg::renderer::dx12_renderer::copy_data(const void* buffer_data, const UINT buffer_size, ComPtr<ID3D12Resource>& destination_resource, ComPtr<ID3D12Resource>& intermediate_resource, D3D12_RESOURCE_STATES state_after, int row_pitch, int slice_pitch)
 {
-	UINT8* buffer_data_begin;
-	CD3DX12_RANGE read_range(0, 0);
-	THROW_IF_FAILED(destination_resource->Map(0, &read_range, reinterpret_cast<void**>(&buffer_data_begin)));
-	memcpy(buffer_data_begin, buffer_data, buffer_size);
-	destination_resource->Unmap(0, 0);
 }
 
 D3D12_VERTEX_BUFFER_VIEW cg::renderer::dx12_renderer::create_vertex_buffer_view(const ComPtr<ID3D12Resource>& vertex_buffer, const UINT vertex_buffer_size)
@@ -396,146 +395,123 @@ void cg::renderer::dx12_renderer::create_constant_buffer_view(const ComPtr<ID3D1
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc{};
 	cbv_desc.BufferLocation = buffer->GetGPUVirtualAddress();
 	cbv_desc.SizeInBytes = (sizeof(cb) + 255) & ~255;
-
 	device->CreateConstantBufferView(&cbv_desc, cpu_handler);
 }
 
 void cg::renderer::dx12_renderer::load_assets()
 {
 	create_root_signature(nullptr, 0);
+
 	create_pso("shaders.hlsl");
+
 	create_command_allocators();
 	create_command_list();
-
 	vertex_buffers.resize(model->get_vertex_buffers().size());
 	vertex_buffer_views.resize(model->get_vertex_buffers().size());
-
 	index_buffers.resize(model->get_index_buffers().size());
-	index_buffer_views.resize(model->get_index_buffers().size());
+	index_buffer_views.resize(model->get_vertex_buffers().size());
 
-	for (size_t i = 0; i < model->get_index_buffers().size(); i++)
-	{
-		//Vertex buffer
+	for (size_t i = 0; i < model->get_index_buffers().size(); i++) {
 		auto vertex_buffer_data = model->get_vertex_buffers()[i];
-		const UINT vertex_buffer_size = static_cast<UINT>(
-				vertex_buffer_data->get_size_in_bytes());
+		const UINT vertex_buffer_size = static_cast<UINT>(vertex_buffer_data->get_size_in_bytes());
+
 		std::wstring vertex_buffer_name(L"Vertex buffer ");
 		vertex_buffer_name += std::to_wstring(i);
+
 		create_resource_on_upload_heap(
 				vertex_buffers[i],
 				vertex_buffer_size,
 				vertex_buffer_name);
-		copy_data(vertex_buffer_data->get_data(),
-				  vertex_buffer_size,
-				  vertex_buffers[i]);
-		vertex_buffer_views[i] = create_vertex_buffer_view(
-				vertex_buffers[i],
-				vertex_buffer_size);
 
-		//Index buffer
+		copy_data(vertex_buffer_data->get_data(), vertex_buffer_size, vertex_buffers[i]);
+
+		vertex_buffer_views[i] = create_vertex_buffer_view(vertex_buffers[i], vertex_buffer_size);
+	}
+
+	for (size_t i = 0; i < model->get_index_buffers().size(); i++) {
 		auto index_buffer_data = model->get_index_buffers()[i];
-		const UINT index_buffer_size = static_cast<UINT>(
-				index_buffer_data->get_size_in_bytes());
+		const UINT index_buffer_size = static_cast<UINT>(index_buffer_data->get_size_in_bytes());
+
 		std::wstring index_buffer_name(L"Index buffer ");
 		index_buffer_name += std::to_wstring(i);
+
 		create_resource_on_upload_heap(
 				index_buffers[i],
 				index_buffer_size,
 				index_buffer_name);
-		copy_data(index_buffer_data->get_data(),
-				  index_buffer_size,
-				  index_buffers[i]);
-		
-		index_buffer_views[i] = create_index_buffer_view(
-				index_buffers[i],
-				index_buffer_size);
+		copy_data(index_buffer_data->get_data(), index_buffer_size, index_buffers[i]);
+		index_buffer_views[i] = create_index_buffer_view(index_buffers[i], index_buffer_size);
 	}
 
-	//Const buffer
 	std::wstring const_buffer_name(L"Constant buffer");
 	create_resource_on_upload_heap(
 			constant_buffer,
-			64*1024,
+			64 * 1024,
 			const_buffer_name);
-	copy_data(&cb,sizeof(cb),constant_buffer);
+	copy_data(&cb, sizeof(cb), constant_buffer);
 	CD3DX12_RANGE read_range(0, 0);
-	THROW_IF_FAILED(constant_buffer->Map(0, &read_range,
-										 reinterpret_cast<void**>(constant_buffer_data_begin)));
-	cbv_srv_heap.create_heap(
-			device,
-			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			1,
-			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
-	create_constant_buffer_view(
-		constant_buffer,
-		cbv_srv_heap.get_cpu_descriptor_handle(0));
+	THROW_IF_FAILED(constant_buffer->Map(
+			0, &read_range, reinterpret_cast<void**>(&constant_buffer_data_begin)));
+	cbv_srv_heap.create_heap(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+	create_constant_buffer_view(constant_buffer, cbv_srv_heap.get_cpu_descriptor_handle(0));
 
 	THROW_IF_FAILED(command_list->Close());
-	
-	//Create a fence
-	THROW_IF_FAILED(device->CreateFence(
-			0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
-	fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	if (fence_event == nullptr)
-	{
+
+	THROW_IF_FAILED(device->CreateFence(0,
+										D3D12_FENCE_FLAG_NONE,
+										IID_PPV_ARGS(&fence)));
+
+	fence_event=CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	if (fence_event == nullptr) {
 		THROW_IF_FAILED(HRESULT_FROM_WIN32(GetLastError()));
 	}
+
 	wait_for_gpu();
 }
 
 
 void cg::renderer::dx12_renderer::populate_command_list()
 {
-	//RESET
-	reinterpret_cast<void**>(&constant_buffer_data_begin);
-	THROW_IF_FAILED(command_list->Reset(
-			command_allocators[frame_index].Get(),
-			pipeline_state.Get()));
+	THROW_IF_FAILED(command_allocators[frame_index]->Reset());
+	THROW_IF_FAILED(command_list->Reset(command_allocators[frame_index].Get(), pipeline_state.Get()));
 
-	//Initial state
 	command_list->SetGraphicsRootSignature(root_signature.Get());
 	ID3D12DescriptorHeap* heap[] = {cbv_srv_heap.get()};
 	command_list->SetDescriptorHeaps(_countof(heap), heap);
-	command_list->SetGraphicsRootDescriptorTable(
-			0, cbv_srv_heap.get_gpu_descriptor_handle(0));
+	command_list->SetGraphicsRootDescriptorTable(0, cbv_srv_heap.get_gpu_descriptor_handle(0));
 	command_list->RSSetViewports(1, &view_port);
 	command_list->RSSetScissorRects(1, &scissor_rect);
-	command_list->IASetPrimitiveTopology(
-			D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	D3D12_RESOURCE_BARRIER begin_barriers[] = {
-			CD3DX12_RESOURCE_BARRIER::Transition(
-					render_targets[frame_index].Get(),
-					D3D12_RESOURCE_STATE_PRESENT,
-					D3D12_RESOURCE_STATE_RENDER_TARGET)};
+	command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3D12_RESOURCE_BARRIER begin_barriers [] = {
+			CD3DX12_RESOURCE_BARRIER::Transition(render_targets[frame_index].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET)
+	};
+
 	command_list->ResourceBarrier(_countof(begin_barriers), begin_barriers);
 
-	//Drawing
-	command_list->OMSetRenderTargets(
-			1,
-			&rtv_heap.get_cpu_descriptor_handle(frame_index),
-			FALSE,
-			nullptr);
-	const float clear_color[] = {0.f, 0.f, 0.f, 1.f};
-	command_list->ClearRenderTargetView(
-			rtv_heap.get_cpu_descriptor_handle(frame_index),
-			clear_color, 0, nullptr);
+	command_list->OMSetRenderTargets(1,
+									 &rtv_heap.get_cpu_descriptor_handle(frame_index),
+									 FALSE,
+									 nullptr);
 
-	for (size_t s = 0; s < model->get_index_buffers().size(); s++) 
-	{
+	const float clear_color[] = {0.f, 0.f, 0.f, 1.f};
+
+	command_list->ClearRenderTargetView(rtv_heap.get_cpu_descriptor_handle(frame_index), clear_color, 0, nullptr);
+	for (size_t s = 0; s<model->get_index_buffers().size();s++) {
 		command_list->IASetVertexBuffers(0, 1, &vertex_buffer_views[s]);
 		command_list->IASetIndexBuffer(&index_buffer_views[s]);
-		command_list->DrawIndexedInstanced(
-				static_cast<UINT>(
-						model->get_index_buffers()[s]->get_number_of_elements()),
-				1, 0, 0, 0);
+		command_list->DrawIndexedInstanced(static_cast<UINT>(model->get_index_buffers()[s]->get_number_of_elements()),
+										   1,
+										   0,
+										   0,
+										   0
+		);
 	}
-	D3D12_RESOURCE_BARRIER end_barriers[] = {
-			CD3DX12_RESOURCE_BARRIER::Transition(
-					render_targets[frame_index].Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			D3D12_RESOURCE_STATE_PRESENT)};
-	command_list->ResourceBarrier(_countof(end_barriers), end_barriers);
 
+	D3D12_RESOURCE_BARRIER end_barriers [] = {
+			CD3DX12_RESOURCE_BARRIER::Transition(render_targets[frame_index].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT)
+	};
+	command_list->ResourceBarrier(_countof(end_barriers), end_barriers);
 	THROW_IF_FAILED(command_list->Close());
 }
 
@@ -543,15 +519,10 @@ void cg::renderer::dx12_renderer::populate_command_list()
 void cg::renderer::dx12_renderer::move_to_next_frame()
 {
 	const UINT64 current_fence_value = fence_values[frame_index];
-	THROW_IF_FAILED(command_queue->Signal(
-			fence.Get(),
-			current_fence_value));
+	THROW_IF_FAILED(command_queue->Signal(fence.Get(), current_fence_value));
 	frame_index = swap_chain->GetCurrentBackBufferIndex();
-	if (fence->GetCompletedValue() < fence_values[frame_index])
-	{
-		THROW_IF_FAILED(fence->SetEventOnCompletion(
-				fence_values[frame_index],
-				fence_event));
+	if (fence->GetCompletedValue() < fence_values[frame_index]) {
+		THROW_IF_FAILED(fence->SetEventOnCompletion(fence_values[frame_index], fence_event));
 		WaitForSingleObjectEx(fence_event, INFINITE, FALSE);
 	}
 	fence_values[frame_index] = current_fence_value + 1;
@@ -561,46 +532,39 @@ void cg::renderer::dx12_renderer::wait_for_gpu()
 {
 	THROW_IF_FAILED(command_queue->Signal(
 			fence.Get(),
-			fence_values[frame_index]));
-	THROW_IF_FAILED(fence->SetEventOnCompletion(
-			fence_values[frame_index],
-			fence_event));
+			fence_values[frame_index]
+			));
+	THROW_IF_FAILED(fence->SetEventOnCompletion(fence_values[frame_index], fence_event));
+
 	WaitForSingleObjectEx(fence_event, INFINITE, FALSE);
 	fence_values[frame_index]++;
 }
 
 
-void cg::renderer::descriptor_heap::create_heap(ComPtr<ID3D12Device>& device, 
-	D3D12_DESCRIPTOR_HEAP_TYPE type, UINT number, 
-	D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+void cg::renderer::descriptor_heap::create_heap(ComPtr<ID3D12Device>& device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT number, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
 	heap_desc.NumDescriptors = number;
 	heap_desc.Type = type;
 	heap_desc.Flags = flags;
-
-	device->CreateDescriptorHeap(
-			&heap_desc,
-			IID_PPV_ARGS(&heap));
+	THROW_IF_FAILED(device->CreateDescriptorHeap(&heap_desc, IID_PPV_ARGS(&heap)));
 	descriptor_size = device->GetDescriptorHandleIncrementSize(type);
-
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE cg::renderer::descriptor_heap::get_cpu_descriptor_handle(UINT index) const
 {
-	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
-			heap->GetCPUDescriptorHandleForHeapStart(),
-			static_cast<INT>(index),
-			descriptor_size);
-
+	return CD3DX12_CPU_DESCRIPTOR_HANDLE(heap->GetCPUDescriptorHandleForHeapStart(),
+										 static_cast<INT>(index),
+										 descriptor_size
+										);
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE cg::renderer::descriptor_heap::get_gpu_descriptor_handle(UINT index) const
 {
-	return CD3DX12_GPU_DESCRIPTOR_HANDLE(
-			heap->GetGPUDescriptorHandleForHeapStart(),
-			static_cast<INT>(index),
-			descriptor_size);
+	return CD3DX12_GPU_DESCRIPTOR_HANDLE(heap->GetGPUDescriptorHandleForHeapStart(),
+										 static_cast<INT>(index),
+										 descriptor_size
+										);
 }
 ID3D12DescriptorHeap* cg::renderer::descriptor_heap::get() const
 {
